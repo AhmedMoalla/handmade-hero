@@ -1,0 +1,9 @@
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+---
+BasedOnStyle: Webkit
+IndentWidth: 4
+---
+Language: Cpp
+PointerAlignment: Left
+AlignAfterOpenBracket: true
+---

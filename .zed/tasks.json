@@ -7,14 +7,14 @@
     "allow_concurrent_runs": false,
     "reveal": "no_focus",
     "reveal_target": "dock",
-    "hide": "on_success",
+    "hide": "never",
     "shell": "system",
     "show_summary": true,
     "show_command": true
   },
   {
     "label": "Debug (Windows x64)",
-    "command": "raddbg.exe --auto_step $ZED_WORKTREE_ROOT\\build\\handmade.exe",
+    "command": "$ZED_WORKTREE_ROOT/build.bat; raddbg.exe --auto_step $ZED_WORKTREE_ROOT\\build\\handmade.exe",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
     "reveal": "never",

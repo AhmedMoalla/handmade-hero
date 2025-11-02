@@ -3,6 +3,7 @@ setlocal
 
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvarsall.bat" x64
 
+rmdir /s /q build
 mkdir build 2>nul
 pushd build
 cl /Zi /Od /MDd /Fehandmade.exe ..\src\win32_handmade.cpp /link user32.lib gdi32.lib

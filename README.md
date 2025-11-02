@@ -11,3 +11,4 @@ This repo contains notes for every day of handmade hero:
 - [Day 3: Allocating a Backbuffer](docs/Day003.md)
 - [Day 4: Animating the Backbuffer](docs/Day004.md)
 - [Day 5: Windows Graphics Review](docs/Day005.md)
+- [Day 6: Gamepad and Keyboard Input](docs/Day006.md)

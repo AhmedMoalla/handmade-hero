@@ -1,3 +1,4 @@
+#include <dsound.h>
 #include <stdint.h>
 #include <windows.h>
 #include <xinput.h>
@@ -10,7 +11,7 @@
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub)
 {
-    return 0;
+    return ERROR_DEVICE_NOT_CONNECTED;
 }
 global_variable x_input_get_state* XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -19,17 +20,73 @@ global_variable x_input_get_state* XInputGetState_ = XInputGetStateStub;
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub)
 {
-    return 0;
+    return ERROR_DEVICE_NOT_CONNECTED;
 }
 global_variable x_input_set_state* XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 internal void Win32LoadXInput(void)
 {
-    HMODULE xInputLibrary = LoadLibrary(XINPUT_DLL);
+    HMODULE xInputLibrary = LoadLibrary("xinput1_4.dll");
+    if (!xInputLibrary) {
+        xInputLibrary = LoadLibrary("xinput1_3.dll");
+    }
+
     if (xInputLibrary) {
         XInputGetState = (x_input_get_state*)GetProcAddress(xInputLibrary, "XInputGetState");
         XInputSetState = (x_input_set_state*)GetProcAddress(xInputLibrary, "XInputSetState");
+    }
+}
+
+typedef HRESULT WINAPI direct_sound_create(LPGUID lpGuid, LPDIRECTSOUND* ppDS, LPUNKNOWN pUnkOuter);
+
+internal void Win32InitDSound(HWND window, DWORD samplesPerSecond, DWORD bufferSize)
+{
+    HMODULE dSoundLibrary = LoadLibrary("dsound.dll");
+    if (dSoundLibrary) {
+        direct_sound_create* DirectSoundCreate = (direct_sound_create*)
+            GetProcAddress(dSoundLibrary, "DirectSoundCreate");
+        IDirectSound* directSound;
+        if (DirectSoundCreate && SUCCEEDED(DirectSoundCreate(NULL, &directSound, NULL))) {
+            WAVEFORMATEX waveFromat = {};
+            waveFromat.wFormatTag = WAVE_FORMAT_PCM;
+            waveFromat.nChannels = 2;
+            waveFromat.nSamplesPerSec = samplesPerSecond;
+            waveFromat.wBitsPerSample = 16;
+            waveFromat.nBlockAlign = (waveFromat.nChannels * waveFromat.wBitsPerSample) / 8;
+            waveFromat.nAvgBytesPerSec = waveFromat.nSamplesPerSec * waveFromat.nBlockAlign;
+            waveFromat.cbSize = 0;
+
+            if (FAILED(directSound->SetCooperativeLevel(window, DSSCL_PRIORITY))) {
+                return;
+            }
+
+            DSBUFFERDESC bufferDescription = {};
+            bufferDescription.dwSize = sizeof(bufferDescription);
+            bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+            IDirectSoundBuffer* primaryBuffer;
+            if (FAILED(directSound->CreateSoundBuffer(&bufferDescription, &primaryBuffer, NULL))) {
+                return;
+            }
+            OutputDebugString("Primary buffer was created.\n");
+
+            if (FAILED(primaryBuffer->SetFormat(&waveFromat))) {
+                return;
+            }
+            OutputDebugString("Primary buffer format was set.\n");
+
+            bufferDescription = {};
+            bufferDescription.dwSize = sizeof(bufferDescription);
+            bufferDescription.dwBufferBytes = bufferSize;
+            bufferDescription.lpwfxFormat = &waveFromat;
+
+            IDirectSoundBuffer* secondaryBuffer;
+            if (FAILED(directSound->CreateSoundBuffer(&bufferDescription, &secondaryBuffer, NULL))) {
+                return;
+            }
+            OutputDebugString("Secondary buffer was created.\n");
+        }
     }
 }
 
@@ -93,7 +150,7 @@ internal void Win32ResizeDIBSection(Win32OffscreenBuffer* buffer, LONG width, LO
 
     int bytesPerPixel = 4;
     int bitmapMemorySize = width * height * bytesPerPixel;
-    buffer->memory = VirtualAlloc(NULL, bitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    buffer->memory = VirtualAlloc(NULL, bitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
     buffer->pitch = buffer->width * bytesPerPixel;
 }
@@ -220,6 +277,8 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE previousInstance, LPSTR cmdLi
         return 1;
     }
 
+    Win32InitDSound(window, 48000, 48000 * sizeof(int16_t) * 2);
+
     HDC deviceContext = GetDC(window);
     int xOffset = 0, yOffset = 0;
     running = true;
@@ -277,6 +336,7 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE previousInstance, LPSTR cmdLi
 
         Win32WindowDimensions dimensions = Win32GetWindowDimensions(window);
         Win32DisplayBufferInWindow(&globalBackBuffer, deviceContext, dimensions.width, dimensions.height);
+        xOffset += 1;
     }
 
     return 0;

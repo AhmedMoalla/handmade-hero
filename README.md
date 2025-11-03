@@ -12,3 +12,4 @@ This repo contains notes for every day of handmade hero:
 - [Day 4: Animating the Backbuffer](docs/Day004.md)
 - [Day 5: Windows Graphics Review](docs/Day005.md)
 - [Day 6: Gamepad and Keyboard Input](docs/Day006.md)
+- [Day 7: Initializing DirectSound](docs/Day007.md)
